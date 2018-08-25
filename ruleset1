@@ -1,0 +1,7 @@
+on PoolSensor#Temperature<26.50 do
+PWM,12,1023,3000
+endon
+
+on PoolSensor#Temperature>29.50 do
+PWM,12,0,3000
+endon
