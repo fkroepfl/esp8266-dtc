@@ -1,0 +1,54 @@
+On System#Boot do
+  TaskValueSet,3,1,75.00 // temperature on dummy sensor
+  TaskValueSet,3,2,70.00 // humidity on dummy sensor
+  event FanOff
+endon
+ 
+// main loop
+On OnOffValues#HumidityOn do
+  If [Temp#Humidity]&gt;[OnOffValues#HumidityOn]
+    event FanOn
+  EndIf
+  If [Temp#Humidity]&lt;[OnOffValues#HumidityOff]
+    event FanOffIfNotTimer // workaround for no nestled if
+  EndIf
+endon
+ 
+On FanOffIfNotTimer do
+  If  [OnOffValues#TimerActive]=0
+    event FanOff
+  EndIf
+EndOn
+ 
+// timer button is pressed
+On Button#Switch=0.00 do
+  If [OnOffValues#FanOn]=0 // do nothing if FAN is already on
+    TaskValueSet,3,4,1
+    event FanOn
+    timerSet,1,180 // turn off in a 3 minutes
+  EndIf
+EndOn
+ 
+// turn off FAN after timer
+On Rules#Timer=1 do
+   TaskValueSet,3,4,0
+   If [Temp#Humidity]&lt;[OnOffValues#HumidityOn] // do not turn off if Humidity is High
+     event FanOff
+   EndIf
+EndOn
+ 
+// command to turn on fan
+On FanOn do
+  TaskValueSet,3,3,1 // FAN is on
+  gpio,12,1
+  SendToHTTP 192.168.1.1,8080,/json.htm?type=command¶m=switchlight&amp;idx=12&amp;switchcmd=On
+EndOn
+ 
+// command to turn off fan
+On FanOff do
+  If [OnOffValues#FanOn]=1
+    TaskValueSet,3,3,0 // FAN is off
+    gpio,12,0
+    SendToHTTP 192.168.1.1,8080,/json.htm?type=command¶m=switchlight&amp;idx=12&amp;switchcmd=Off
+  EndIf
+endon
